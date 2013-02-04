@@ -483,19 +483,19 @@ class FunctionAPI(ModelView):
         try:
             data = json.loads(request.args.get('q')) or {}
         except (TypeError, ValueError, OverflowError):
-            return jsonify_status_code(400, message='Unable to decode data')
+            return jsonify(message='Unable to decode data'), 400
         try:
             result = _evaluate_functions(self.session, self.model,
                                          data.get('functions'))
             if not result:
-                return jsonify_status_code(204)
+                return jsonpify(), 204
             return jsonpify(result)
         except AttributeError, exception:
             message = 'No such field "%s"' % exception.field
-            return jsonify_status_code(400, message=message)
+            return jsonify(message=message), 400
         except OperationalError, exception:
             message = 'No such function "%s"' % exception.function
-            return jsonify_status_code(400, message=message)
+            return jsonify(message=message), 400
 
 
 class API(ModelView):
@@ -826,7 +826,7 @@ class API(ModelView):
         self.session.rollback()
         errors = self._extract_error_messages(exception) or \
             'Could not determine specific validation errors'
-        return jsonify_status_code(400, validation_errors=errors)
+        return jsonify(validation_errors=errors), 400
 
     def _extract_error_messages(self, exception):
         """Tries to extract a dictionary mapping field name to validation error
@@ -956,7 +956,7 @@ class API(ModelView):
         try:
             data = json.loads(request.args.get('q', '{}'))
         except (TypeError, ValueError, OverflowError):
-            return jsonify_status_code(400, message='Unable to decode data')
+            return jsonify(message='Unable to decode data'), 400
 
         # exceptions are caught by the get() method, which calls this one
         for preprocessor in self.preprocessors['GET_MANY']:
@@ -970,8 +970,7 @@ class API(ModelView):
         except MultipleResultsFound:
             return jsonify(message='Multiple results found')
         except:
-            return jsonify_status_code(400,
-                                       message='Unable to construct query')
+            return jsonify(message='Unable to construct query'), 400
 
         # create a placeholder for the relations of the returned models
         relations = frozenset(_get_relations(self.model))
@@ -1177,7 +1176,7 @@ class API(ModelView):
             return jsonify_status_code(status_code=e.status_code,
                                        message=e.message)
 
-        return jsonify_status_code(204)
+        return jsonify(), 204
 
     def post(self):
         """Creates a new instance of a given model based on request data.
@@ -1204,13 +1203,13 @@ class API(ModelView):
         try:
             params = json.loads(request.data)
         except (TypeError, ValueError, OverflowError):
-            return jsonify_status_code(400, message='Unable to decode data')
+            return jsonify(message='Unable to decode data'), 400
         # Check for any request parameter naming a column which does not exist
         # on the current model.
         for field in params:
             if not hasattr(self.model, field):
                 msg = "Model does not have field '%s'" % field
-                return jsonify_status_code(400, message=msg)
+                return jsonify(message=msg), 400
 
         # apply any preprocessors to the POST arguments
         try:
@@ -1271,7 +1270,7 @@ class API(ModelView):
                 return jsonify_status_code(status_code=e.status_code,
                                            message=e.message)
 
-            return jsonify_status_code(201, **result)
+            return jsonify(**result), 201
         except self.validation_exceptions, exception:
             return self._handle_validation_exception(exception)
         except IntegrityError, error:
@@ -1299,7 +1298,7 @@ class API(ModelView):
             data = json.loads(request.data)
         except (TypeError, ValueError, OverflowError):
             # this also happens when request.data is empty
-            return jsonify_status_code(400, message='Unable to decode data')
+            return jsonify(message='Unable to decode data'), 400
         # Get the search parameters; all other keys in the `data` dictionary
         # indicate a change in the model's field.
         search_params = data.pop('q', {})
@@ -1308,7 +1307,7 @@ class API(ModelView):
         for field in data:
             if not hasattr(self.model, field):
                 msg = "Model does not have field '%s'" % field
-                return jsonify_status_code(400, message=msg)
+                return jsonify(message=msg), 400
 
         # Check if the request is to patch many instances of the current model.
         patchmany = instid is None
@@ -1322,8 +1321,7 @@ class API(ModelView):
                 return jsonify_status_code(status_code=e.status_code,
                                            message=e.message)
             except:
-                return jsonify_status_code(400,
-                                           message='Unable to construct query')
+                return jsonify(message='Unable to construct query'), 400
         else:
             try:
                 for preprocessor in self.preprocessors['PATCH_SINGLE']:
